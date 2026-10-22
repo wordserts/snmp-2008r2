@@ -20,8 +20,8 @@ Optional filter variables are available in the monitoring configuration: `storag
 ## Prerequisites
 
 1. **ActiveGate** with the Extensions Execution Controller (EEC) enabled, which can reach the target servers.
-2. **Certificates**: you must sign the extension with your own certificate, and the matching root/CA certificate must be uploaded to the ActiveGate (and the Dynatrace credential/certificate store as required by your environment). Dynatrace will not run an unsigned custom extension. See the Dynatrace docs on [signing extensions](https://docs.dynatrace.com/docs/ingest-from/extensions/advanced-configuration/sign-extension).
-3. **SNMP Service installed and configured on each destination Windows host** (Server Manager > Features > SNMP Service). Set the community string (or v3 credentials) and add the ActiveGate's IP as a permitted host.
+2. **Certificates**: you must sign the extension with your own certificate, and the matching root/CA certificate must be uploaded to the ActiveGate (and the Dynatrace credential/certificate store as required by your environment). Dynatrace will not run an unsigned custom extension. See the Dynatrace docs on [signing extensions](https://docs.dynatrace.com/docs/ingest-from/extensions/develop-your-extensions/sign-extensions).
+3. **SNMP Service installed and configured on each destination Windows host** (Server Manager > Features > SNMP Service). Set the community string and add the ActiveGate's IP as a permitted host.
 4. **Network access**: allow SNMP from the ActiveGate to the target hosts in the Windows firewall and any network firewalls (default **UDP 161**).
 
 ## Installation
@@ -55,4 +55,4 @@ Two example dashboards are included. Import them into Dynatrace via **Dashboards
 ![Individual server 1](Individual1.png)
 ![Individual server 2](Individual3.png)
 
-Screenshots use demo data.
+
