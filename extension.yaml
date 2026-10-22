@@ -1,0 +1,953 @@
+name: "custom:snmp.server2008r2"
+version: "2.8.1"
+minDynatraceVersion: "1.303.0"
+minEECVersion: "1.303.0"
+author:
+  name: "Custom Extensions Creator App"
+keywords:
+  - "title:Windows Server SNMP"
+  - "category:network"
+  - "tech:snmp"
+  - "vendor:microsoft"
+  - "icon:server"
+  - "entity:None"
+vars:
+  - id: "ext.activationtag"
+    displayName: "Extension activation tag"
+    type: "text"
+    maxLength: 50000
+  - id: "storage_path"
+    type: "text"
+    displayName: "Pattern to filter capturing of memory / disks by description.
+      e.g., $prefix(C:)"
+    maxLength: 50000
+  - id: "interface_descr"
+    type: "text"
+    displayName: "Pattern to filter capturing of network interfaces by description
+      (ifDescr has a trailing space - prefer $prefix / $contains over $eq)."
+    maxLength: 50000
+  - id: "interface_type"
+    type: "text"
+    displayName: "Pattern to filter capturing of network interfaces by ifType. e.g.,
+      $eq(6) for ethernet only"
+    maxLength: 50000
+  - id: "service_name"
+    type: "text"
+    displayName: "Pattern to filter which Windows services are captured, by display
+      name (leave blank for all running services). e.g.,
+      $or($prefix(SQL),$contains(MSSQL),$eq(My App Service)) or
+      $not($prefix(Windows))"
+    maxLength: 50000
+metrics:
+  - key: "snmp.winserver.sys.uptime"
+    metadata:
+      displayName: "SNMP agent uptime"
+      description: "Time (in hundredths of a second) since the SNMP service was last
+        re-initialized. On Windows this is the SNMP SERVICE uptime, not the OS
+        uptime - use snmp.winserver.hr.systemuptime for OS uptime. sysUpTime
+        SNMPv2-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.sys.info"
+    metadata:
+      displayName: "System information marker"
+      description: "Constant metric (value 1) carrying descriptive system attributes
+        (sysDescr, sysObjectID, sysContact, sysLocation) polled on a slow
+        interval."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.systemuptime"
+    metadata:
+      displayName: "OS uptime"
+      description: "Time (in hundredths of a second) since the host operating system
+        was last booted. hrSystemUptime HOST-RESOURCES-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.systemnumusers"
+    metadata:
+      displayName: "User sessions"
+      description: "Number of user sessions for which the host is storing state
+        information. hrSystemNumUsers HOST-RESOURCES-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.systemprocesses"
+    metadata:
+      displayName: "Number of processes"
+      description: "Number of process contexts currently loaded or running on the
+        host. hrSystemProcesses HOST-RESOURCES-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.storagesize"
+    metadata:
+      displayName: "Storage size"
+      description: "Size of the storage entry (disk, physical memory, virtual memory)
+        in units of storage.allocationunits bytes. Multiply by the allocation
+        units dimension for bytes. hrStorageSize HOST-RESOURCES-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.storageused"
+    metadata:
+      displayName: "Storage used"
+      description: "Amount of the storage entry in use, in units of
+        storage.allocationunits bytes. Free = size - used. hrStorageUsed
+        HOST-RESOURCES-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.memorysize"
+    metadata:
+      displayName: "Physical memory size"
+      description: "Total physical memory in KiB (hrMemorySize, HOST-RESOURCES-MIB). A
+        scalar, no table walk."
+      unit: "KiloByte"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.svc.operatingstate"
+    metadata:
+      displayName: "Windows service operating state"
+      description: "LanMgr-II svSvcOperatingState: 1 active, 2 continue-pending, 3
+        pause-pending, 4 paused. Windows lists only running services; a stopped
+        service disappears from the table, so alert on missing data."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.hr.processorload"
+    metadata:
+      displayName: "Processor load (CPU used)"
+      description: "Average over the last minute of the percentage of time this
+        processor was not idle. CPU free = 100 - used. hrProcessorLoad
+        HOST-RESOURCES-MIB."
+      unit: "Percent"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.in.octets.count"
+    metadata:
+      displayName: "Interface bytes received"
+      description: "Octets received on the interface. 32-bit counter (Windows SNMP has
+        no 64-bit counters) - wraps in about 34 seconds at 1 Gbps. ifInOctets
+        IF-MIB."
+      unit: "Byte"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.out.octets.count"
+    metadata:
+      displayName: "Interface bytes sent"
+      description: "Octets transmitted on the interface. 32-bit counter. ifOutOctets
+        IF-MIB."
+      unit: "Byte"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.in.ucastpkts.count"
+    metadata:
+      displayName: "Interface packets received"
+      description: "Unicast packets received on the interface. ifInUcastPkts IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.out.ucastpkts.count"
+    metadata:
+      displayName: "Interface packets sent"
+      description: "Unicast packets transmitted on the interface. ifOutUcastPkts IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.in.errors.count"
+    metadata:
+      displayName: "Interface receive errors"
+      description: "Inbound packets that contained errors. ifInErrors IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.out.errors.count"
+    metadata:
+      displayName: "Interface transmit errors"
+      description: "Outbound packets that could not be transmitted because of errors.
+        ifOutErrors IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.in.discards.count"
+    metadata:
+      displayName: "Interface receive discards"
+      description: "Inbound packets discarded without errors. ifInDiscards IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.out.discards.count"
+    metadata:
+      displayName: "Interface transmit discards"
+      description: "Outbound packets discarded without errors. ifOutDiscards IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.operstatus"
+    metadata:
+      displayName: "Interface operational status"
+      description: "Operational state: up(1), down(2), testing(3), unknown(4),
+        dormant(5), notPresent(6), lowerLayerDown(7). ifOperStatus IF-MIB."
+      unit: "Count"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+  - key: "snmp.winserver.if.speed"
+    metadata:
+      displayName: "Interface speed"
+      description: "Current interface bandwidth in bits per second (capped at about
+        4.29 Gbps). Use with the octet counters to derive utilization. ifSpeed
+        IF-MIB."
+      unit: "BitPerSecond"
+      sourceEntityType: "dt:snmp-winserver"
+      tags:
+        - "server"
+        - "snmp"
+        - "windows"
+snmp:
+  - group: "system"
+    interval:
+      minutes: 1
+    dimensions:
+      - key: "snmp.node"
+        value: "const:system"
+      - key: "snmp.mib"
+        value: "const:SNMPv2-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    metrics:
+      - key: "snmp.winserver.sys.uptime"
+        value: "oid:1.3.6.1.2.1.1.3.0"
+  - group: "entity-attributes"
+    interval:
+      minutes: 30
+    dimensions:
+      - key: "snmp.node"
+        value: "const:entityAttributes"
+      - key: "snmp.mib"
+        value: "const:SNMPv2-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+      - key: "sys.descr"
+        value: "oid:1.3.6.1.2.1.1.1.0"
+      - key: "sys.objectid"
+        value: "oid:1.3.6.1.2.1.1.2.0"
+      - key: "sys.contact"
+        value: "oid:1.3.6.1.2.1.1.4.0"
+      - key: "sys.location"
+        value: "oid:1.3.6.1.2.1.1.6.0"
+    metrics:
+      - key: "snmp.winserver.sys.info"
+        value: "const:1"
+  - group: "hr-system"
+    interval:
+      minutes: 1
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:HOST-RESOURCES-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "hr-system"
+        featureSet: "hr-system"
+        table: false
+        dimensions:
+          - key: "snmp.node"
+            value: "const:hrSystem"
+        metrics:
+          - key: "snmp.winserver.hr.systemuptime"
+            value: "oid:1.3.6.1.2.1.25.1.1.0"
+          - key: "snmp.winserver.hr.systemnumusers"
+            value: "oid:1.3.6.1.2.1.25.1.5.0"
+          - key: "snmp.winserver.hr.systemprocesses"
+            value: "oid:1.3.6.1.2.1.25.1.6.0"
+  - group: "hr-processor"
+    interval:
+      minutes: 1
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:HOST-RESOURCES-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "hr-processor"
+        featureSet: "hr-processor"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:hrProcessor"
+          - key: "processor.index"
+            value: "oid:1.3.6.1.2.1.25.3.2.1.1"
+        metrics:
+          - key: "snmp.winserver.hr.processorload"
+            value: "oid:1.3.6.1.2.1.25.3.3.1.2"
+  - group: "hr-memory-total"
+    interval:
+      minutes: 5
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:HOST-RESOURCES-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "hr-memory-total"
+        featureSet: "hr-memory-total"
+        table: false
+        dimensions:
+          - key: "snmp.node"
+            value: "const:hrMemory"
+        metrics:
+          - key: "snmp.winserver.hr.memorysize"
+            value: "oid:1.3.6.1.2.1.25.2.2.0"
+  - group: "hr-storage"
+    interval:
+      minutes: 5
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:HOST-RESOURCES-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "hr-storage-table"
+        featureSet: "hr-storage"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:hrStorage"
+          - key: "storage.index"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.1"
+          - key: "storage.type"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.2"
+          - key: "storage.descr"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.3"
+            filter: "var:storage_path"
+          - key: "storage.allocationunits"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.4"
+        metrics:
+          - key: "snmp.winserver.hr.storagesize"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.5"
+          - key: "snmp.winserver.hr.storageused"
+            value: "oid:1.3.6.1.2.1.25.2.3.1.6"
+  - group: "lanmgr-services"
+    interval:
+      minutes: 2
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:LANMGR-MIB-II"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "lanmgr-services-table"
+        featureSet: "lanmgr-services"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:svSvcTable"
+          - key: "svc.name"
+            value: "oid:1.3.6.1.4.1.77.1.2.3.1.1"
+            filter: "var:service_name"
+        metrics:
+          - key: "snmp.winserver.svc.operatingstate"
+            value: "oid:1.3.6.1.4.1.77.1.2.3.1.3"
+  - group: "if-traffic"
+    interval:
+      minutes: 1
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:IF-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "if-traffic"
+        featureSet: "if-traffic"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:ifTable"
+          - key: "if.index"
+            value: "oid:1.3.6.1.2.1.2.2.1.1"
+          - key: "if.descr"
+            value: "oid:1.3.6.1.2.1.2.2.1.2"
+            filter: "var:interface_descr"
+          - key: "if.type"
+            value: "oid:1.3.6.1.2.1.2.2.1.3"
+            filter: "var:interface_type"
+        metrics:
+          - key: "snmp.winserver.if.in.octets.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.10"
+            type: "count"
+          - key: "snmp.winserver.if.out.octets.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.16"
+            type: "count"
+          - key: "snmp.winserver.if.in.ucastpkts.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.11"
+            type: "count"
+          - key: "snmp.winserver.if.out.ucastpkts.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.17"
+            type: "count"
+  - group: "if-status"
+    interval:
+      minutes: 2
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:IF-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "if-status"
+        featureSet: "if-status"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:ifTable"
+          - key: "if.index"
+            value: "oid:1.3.6.1.2.1.2.2.1.1"
+          - key: "if.descr"
+            value: "oid:1.3.6.1.2.1.2.2.1.2"
+            filter: "var:interface_descr"
+          - key: "if.type"
+            value: "oid:1.3.6.1.2.1.2.2.1.3"
+            filter: "var:interface_type"
+        metrics:
+          - key: "snmp.winserver.if.operstatus"
+            value: "oid:1.3.6.1.2.1.2.2.1.8"
+          - key: "snmp.winserver.if.speed"
+            value: "oid:1.3.6.1.2.1.2.2.1.5"
+  - group: "if-errors"
+    interval:
+      minutes: 5
+    dimensions:
+      - key: "snmp.mib"
+        value: "const:IF-MIB"
+      - key: "sys.name"
+        value: "oid:1.3.6.1.2.1.1.5.0"
+    subgroups:
+      - subgroup: "if-errors"
+        featureSet: "if-errors"
+        table: true
+        dimensions:
+          - key: "snmp.node"
+            value: "const:ifTable"
+          - key: "if.index"
+            value: "oid:1.3.6.1.2.1.2.2.1.1"
+          - key: "if.descr"
+            value: "oid:1.3.6.1.2.1.2.2.1.2"
+            filter: "var:interface_descr"
+          - key: "if.type"
+            value: "oid:1.3.6.1.2.1.2.2.1.3"
+            filter: "var:interface_type"
+        metrics:
+          - key: "snmp.winserver.if.in.errors.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.14"
+            type: "count"
+          - key: "snmp.winserver.if.out.errors.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.20"
+            type: "count"
+          - key: "snmp.winserver.if.in.discards.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.13"
+            type: "count"
+          - key: "snmp.winserver.if.out.discards.count"
+            value: "oid:1.3.6.1.2.1.2.2.1.19"
+            type: "count"
+topology:
+  types:
+    - name: "dt:snmp-winserver"
+      displayName: "SNMP Windows Server"
+      enabled: true
+      rules:
+        - idPattern: "snmp_winserver_{device.address}"
+          instanceNamePattern: "{sys.name}"
+          iconPattern: "server"
+          requiredDimensions:
+            - key: "device.address"
+          sources:
+            - sourceType: "Metrics"
+              condition: "$prefix(snmp.winserver.)"
+          attributes:
+            - key: "sys_name"
+              pattern: "{sys.name}"
+            - key: "dt.ip_addresses"
+              pattern: "{device.address}"
+            - key: "dt.listen_ports"
+              pattern: "{device.port}"
+            - key: "dt.dns_names"
+              pattern: "{device.name}"
+            - key: "dt.security_context"
+              pattern: "{dt.security_context}"
+        - idPattern: "snmp_winserver_{device.address}"
+          instanceNamePattern: "{sys.name}"
+          iconPattern: "server"
+          requiredDimensions:
+            - key: "device.address"
+          sources:
+            - sourceType: "Metrics"
+              condition: "$eq(snmp.winserver.sys.info)"
+          attributes:
+            - key: "sys_description"
+              pattern: "{sys.descr}"
+            - key: "sys_contact"
+              pattern: "{sys.contact}"
+            - key: "sys_location"
+              pattern: "{sys.location}"
+            - key: "sys_objectid"
+              pattern: "{sys.objectid}"
+  relationships:
+    - enabled: true
+      fromType: "dt:snmp-winserver"
+      typeOfRelation: "SAME_AS"
+      toType: "snmptraps:com_dynatrace_ext_snmp-traps"
+      sources:
+        - sourceType: "Entities"
+          mappingRules:
+            - sourceProperty: "dt.ip_addresses"
+              sourceTransformation: "To lower case"
+              destinationProperty: "dt.ip_addresses"
+              destinationTransformation: "To lower case"
+    - enabled: true
+      fromType: "dt:snmp-winserver"
+      typeOfRelation: "SAME_AS"
+      toType: "network:device"
+      sources:
+        - sourceType: "Entities"
+          mappingRules:
+            - sourceProperty: "dt.ip_addresses"
+              sourceTransformation: "To lower case"
+              destinationProperty: "dt.ip_addresses"
+              destinationTransformation: "To lower case"
+    - enabled: true
+      fromType: "dt:snmp-winserver"
+      typeOfRelation: "SAME_AS"
+      toType: "host"
+      sources:
+        - sourceType: "Entities"
+          mappingRules:
+            - sourceProperty: "dt.ip_addresses"
+              sourceTransformation: "To lower case"
+              destinationProperty: "dt.ip_addresses"
+              destinationTransformation: "To lower case"
+screens:
+  - entityType: "dt:snmp-winserver"
+    detailsSettings:
+      target: "BOTH"
+      staticContent:
+        breadcrumbs:
+          - type: "ENTITY_LIST_REF"
+            entityType: "dt:snmp-winserver"
+            displayName: "SNMP Windows Servers"
+        showProblems: true
+        showProperties: true
+        showTags: true
+        showGlobalFilter: true
+        showAddTag: true
+      layout:
+        autoGenerate: false
+        cards:
+          - key: "system_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "hr_system_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "cpu_overview_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "cpu_core_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "hr_storage_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "if_traffic_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "if_status_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+          - key: "if_error_charts"
+            type: "CHART_GROUP"
+            width: "FULL_SIZE"
+    chartsCards:
+      - key: "system_charts"
+        displayName: "System Metrics"
+        description: "Always collected (SNMPv2-MIB). On Windows this is the SNMP service
+          uptime, not the OS uptime."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 2
+        charts:
+          - displayName: "SNMP agent uptime (centiseconds)"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.sys.uptime:splitBy(\"dt.entity.dt:snmp-winserver\
+                  \")"
+                dqlQuery: "timeseries uptime=avg(`snmp.winserver.sys.uptime`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "SNMP agent uptime (centiseconds)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.sys.uptime:splitBy(\"dt.entity.dt:snmp-winserver\
+                    \")"
+                  dqlQuery: "timeseries uptime=avg(`snmp.winserver.sys.uptime`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+      - key: "hr_system_charts"
+        displayName: "Host System Metrics"
+        description: "HOST-RESOURCES-MIB. OS uptime is in centiseconds."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 6
+        charts:
+          - displayName: "OS uptime (centiseconds)"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.hr.systemuptime:splitBy(\"dt.entity.dt:snmp-win\
+                  server\")"
+                dqlQuery: "timeseries uptime=avg(`snmp.winserver.hr.systemuptime`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "OS uptime (centiseconds)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.systemuptime:splitBy(\"dt.entity.dt:snmp-win\
+                    server\")"
+                  dqlQuery: "timeseries uptime=avg(`snmp.winserver.hr.systemuptime`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "User sessions"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.hr.systemnumusers:splitBy(\"dt.entity.dt:snmp-w\
+                  inserver\")"
+                dqlQuery: "timeseries users=avg(`snmp.winserver.hr.systemnumusers`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "User sessions"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.systemnumusers:splitBy(\"dt.entity.dt:snmp-w\
+                    inserver\")"
+                  dqlQuery: "timeseries users=avg(`snmp.winserver.hr.systemnumusers`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "Processes"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.hr.systemprocesses:splitBy(\"dt.entity.dt:snmp-\
+                  winserver\")"
+                dqlQuery: "timeseries processes=avg(`snmp.winserver.hr.systemprocesses`),
+                  filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "Processes"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.systemprocesses:splitBy(\"dt.entity.dt:snmp-\
+                    winserver\")"
+                  dqlQuery: "timeseries processes=avg(`snmp.winserver.hr.systemprocesses`),
+                    filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+      - key: "cpu_overview_charts"
+        displayName: "CPU Overview"
+        description: "hrProcessorLoad averaged across all cores (percent of time not
+          idle over the last minute). CPU free = 100 - used."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 4
+        charts:
+          - displayName: "CPU used (%)"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp-wi\
+                  nserver\"):avg"
+                dqlQuery: "timeseries used=avg(`snmp.winserver.hr.processorload`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "CPU used (%)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp-wi\
+                    nserver\"):avg"
+                  dqlQuery: "timeseries used=avg(`snmp.winserver.hr.processorload`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "CPU free (%)"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "(100 -
+                  snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp-w\
+                  inserver\"):avg)"
+                dqlQuery: "timeseries used=avg(`snmp.winserver.hr.processorload`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)} | fieldsAdd
+                  free = 100 - used[] | fieldsRemove used"
+          - displayName: "CPU free (%)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "(100 -
+                    snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp\
+                    -winserver\"):avg)"
+                  dqlQuery: "timeseries used=avg(`snmp.winserver.hr.processorload`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)} | fieldsAdd
+                    free = 100 - used[] | fieldsRemove used"
+      - key: "cpu_core_charts"
+        displayName: "CPU per Core"
+        description: "Per-core load. processor.index is the hrDeviceIndex of each
+          logical processor."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 2
+        charts:
+          - displayName: "Busiest core (%)"
+            visualizationType: "SINGLE_VALUE"
+            singleValueConfig:
+              metric:
+                metricSelector: "snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp-wi\
+                  nserver\"):max"
+                dqlQuery: "timeseries peak=max(`snmp.winserver.hr.processorload`), filter:
+                  {`dt.entity.dt:snmp-winserver` == $(entityId)}"
+          - displayName: "CPU used (%) per core"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.processorload:splitBy(\"dt.entity.dt:snmp-wi\
+                    nserver\", \"processor.index\")"
+                  dqlQuery: "timeseries load=avg(`snmp.winserver.hr.processorload`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {processor.index}"
+      - key: "hr_storage_charts"
+        displayName: "Memory and Disk"
+        description: "hrStorage rows: each disk plus Physical Memory and Virtual Memory.
+          Percentages are unit-free. Size and used are in allocation units
+          (multiply by storage.allocationunits for bytes). Needs the hr-storage
+          group."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 4
+        charts:
+          - displayName: "Used (%)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "(snmp.winserver.hr.storageused:splitBy(\"dt.entity.dt:snmp-win\
+                    server\", \"storage.descr\"):avg /
+                    snmp.winserver.hr.storagesize:splitBy(\"dt.entity.dt:snmp-w\
+                    inserver\", \"storage.descr\"):avg * 100)"
+                  dqlQuery: "timeseries { size=avg(`snmp.winserver.hr.storagesize`),
+                    used=avg(`snmp.winserver.hr.storageused`) }, filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {storage.descr} | fieldsAdd used_pct = used[] / size[] * 100
+                    | fieldsRemove size, used"
+          - displayName: "Free (%)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "(100 -
+                    (snmp.winserver.hr.storageused:splitBy(\"dt.entity.dt:snmp-\
+                    winserver\", \"storage.descr\"):avg /
+                    snmp.winserver.hr.storagesize:splitBy(\"dt.entity.dt:snmp-w\
+                    inserver\", \"storage.descr\"):avg * 100))"
+                  dqlQuery: "timeseries { size=avg(`snmp.winserver.hr.storagesize`),
+                    used=avg(`snmp.winserver.hr.storageused`) }, filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {storage.descr} | fieldsAdd free_pct = 100 - used[] / size[]
+                    * 100 | fieldsRemove size, used"
+          - displayName: "Storage size (allocation units)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.storagesize:splitBy(\"dt.entity.dt:snmp-wins\
+                    erver\", \"storage.descr\")"
+                  dqlQuery: "timeseries size=avg(`snmp.winserver.hr.storagesize`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {storage.descr}"
+          - displayName: "Storage used (allocation units)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.hr.storageused:splitBy(\"dt.entity.dt:snmp-wins\
+                    erver\", \"storage.descr\")"
+                  dqlQuery: "timeseries used=avg(`snmp.winserver.hr.storageused`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {storage.descr}"
+      - key: "if_traffic_charts"
+        displayName: "Network Traffic"
+        description: "IF-MIB. 32-bit counters (Windows SNMP has no 64-bit counters), so
+          throughput is only reliable below roughly 570 Mbps at a 1 minute
+          poll."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 4
+        charts:
+          - displayName: "Bytes received"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.in.octets.count:splitBy(\"dt.entity.dt:snmp-\
+                    winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries bytes=avg(`snmp.winserver.if.in.octets.count`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Bytes sent"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.out.octets.count:splitBy(\"dt.entity.dt:snmp\
+                    -winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries bytes=avg(`snmp.winserver.if.out.octets.count`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Packets received"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.in.ucastpkts.count:splitBy(\"dt.entity.dt:sn\
+                    mp-winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries packets=avg(`snmp.winserver.if.in.ucastpkts.count`),
+                    filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Packets sent"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.out.ucastpkts.count:splitBy(\"dt.entity.dt:s\
+                    nmp-winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries packets=avg(`snmp.winserver.if.out.ucastpkts.count`),
+                    filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+      - key: "if_status_charts"
+        displayName: "Network Interface Status"
+        description: "IF-MIB. Operational status: up(1), down(2), testing(3),
+          unknown(4), dormant(5), notPresent(6), lowerLayerDown(7)."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 2
+        charts:
+          - displayName: "Operational status"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.operstatus:splitBy(\"dt.entity.dt:snmp-winse\
+                    rver\", \"if.descr\")"
+                  dqlQuery: "timeseries status=avg(`snmp.winserver.if.operstatus`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Interface speed (bits per second)"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.speed:splitBy(\"dt.entity.dt:snmp-winserver\
+                    \", \"if.descr\")"
+                  dqlQuery: "timeseries speed=avg(`snmp.winserver.if.speed`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+      - key: "if_error_charts"
+        displayName: "Network Errors and Discards"
+        description: "IF-MIB."
+        mode: "NORMAL"
+        target: "BOTH"
+        chartsInRow: 2
+        numberOfVisibleCharts: 4
+        charts:
+          - displayName: "Receive errors"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.in.errors.count:splitBy(\"dt.entity.dt:snmp-\
+                    winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries errors=avg(`snmp.winserver.if.in.errors.count`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Transmit errors"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.out.errors.count:splitBy(\"dt.entity.dt:snmp\
+                    -winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries errors=avg(`snmp.winserver.if.out.errors.count`), filter:
+                    {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Receive discards"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.in.discards.count:splitBy(\"dt.entity.dt:snm\
+                    p-winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries discards=avg(`snmp.winserver.if.in.discards.count`),
+                    filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
+          - displayName: "Transmit discards"
+            visualizationType: "GRAPH_CHART"
+            graphChartConfig:
+              metrics:
+                - metricSelector: "snmp.winserver.if.out.discards.count:splitBy(\"dt.entity.dt:sn\
+                    mp-winserver\", \"if.descr\")"
+                  dqlQuery: "timeseries discards=avg(`snmp.winserver.if.out.discards.count`),
+                    filter: {`dt.entity.dt:snmp-winserver` == $(entityId)}, by:
+                    {if.descr}"
